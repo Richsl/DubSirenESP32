@@ -84,7 +84,7 @@ class MultiWaveGenerator {
                 break;
             
             case WAV_PWM:
-                result =0;
+                result =-m_amplitude;
                 if(g_phase+m_phase>m_PWM){
                     result = m_amplitude;
                 }

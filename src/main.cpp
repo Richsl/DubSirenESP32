@@ -10,7 +10,7 @@ AudioKit kit;
 // MultiWaveGenerator(float amplitude = 32767.0, float phase = 0.0, waveType wt = WAV_SINE, float pwm = PI,int invert = 0)
 MultiWaveGenerator CAR_wave(32767.0,0.0,WAV_SINE,2*PI,0);
 MultiWaveGenerator FM_wave(32767.0,0.0,WAV_SINE,2*PI,0);
-MultiWaveGenerator AM_wave(32767.0,0.0,WAV_SINE,2*PI,0);
+MultiWaveGenerator AM_wave(32767.0,0.0,WAV_PWM,PI,0);
 const int BUFFER_SIZE = 1024; // this is the buffer size in bytes, not samples
 uint8_t buffer[BUFFER_SIZE];
 uint8_t MTbuffer[BUFFER_SIZE];
@@ -145,8 +145,8 @@ void loop() {
        {sample=0;}
        int16_t delay_sample = *del_ptr_read++;
        delay_sample = *del_ptr_read++;
-       //int16_t mix = (sample/2) + (delay_sample/2);
-       int16_t mix = sample;
+       int16_t mix = (sample/2) + (delay_sample/2);
+       //int16_t mix = sample;
       
       *ptr++ = mix;
       *ptr++ = mix;
