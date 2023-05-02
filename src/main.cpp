@@ -26,8 +26,10 @@ uint16_t CAR_FQ =3000;
 uint16_t AM_WF =0;
 float AM_FQ =0;
 float AM_AMT =0;
-uint16_t CAR_VOL =0;
-uint16_t DEL_RT =23000;
+float CAR_VOL = 0.2;
+float CAR_VOL_NEW = 0.2;
+float DEL_RT =0.9;
+float DEL_RT_NEW =0.9;
 float DEL_AMT=0;
 float DEL_FB=0;
 int16_t FM_instant;
@@ -37,11 +39,15 @@ uint16_t CAR_FQ_READ;
 uint16_t CAR_FQ_READ_NEW;
 
 
+
 size_t bytes2i2s;
 int16_t* del_ptr_write;
 int16_t* del_ptr_read;
 int16_t* del_ptr_start;
 int16_t* del_ptr_end;
+
+int16_t delay_length=23000;
+int16_t delay_max=23000;
 
 const int firePin = 12;  // the number of the pushbutton pin should re 'rec' button on LyraT
 int fireState = 1;  // input goes low when fired
@@ -75,7 +81,7 @@ void setup() {
   // open in write mode
   auto cfg = kit.defaultConfig(AudioOutput);
   kit.begin(cfg);
-  kit.setVolume(30);
+  kit.setVolume(100);
 
   del_ptr_write = (int16_t*)delay_buffer;
   del_ptr_start = (int16_t*)delay_buffer;
@@ -83,6 +89,7 @@ void setup() {
   del_ptr_end = del_ptr_start+(DELAY_BUFFER_SIZE/4);
   //del_ptr_read = (int16_t*)delay_buffer[DELAY_BUFFER_SIZE-10000]; // sets delay to read head
   del_ptr_read = del_ptr_end - (23000*4);
+  delay_length=(int16_t)23000;
   Serial.print("del_ptr_start/n");
   Serial.print((int)del_ptr_start);
   Serial.print("del_ptr_end/n");
@@ -107,9 +114,23 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-
+  DEL_FB = 1-((float)analogRead(DEL_FB_PIN)/4096);
+  DEL_AMT = 1-((float)analogRead(DEL_AMT_PIN)/4096);
+  DEL_RT_NEW = 1-((float)analogRead(DEL_RT_PIN)/4096);
   FM_AMT = 1-((float)analogRead(FM_AMT_PIN)/4096);
   AM_AMT = 1-((float)analogRead(AM_AMT_PIN)/4096);
+  CAR_VOL_NEW = 1-((float)analogRead(CAR_VOL_PIN)/4096);
+  if (abs(CAR_VOL_NEW-CAR_VOL)>0.05){
+    CAR_VOL=CAR_VOL_NEW;
+  }
+
+  if (abs(DEL_RT_NEW-DEL_RT)>0.08){
+    DEL_RT=DEL_RT_NEW;
+    float product=DEL_RT*delay_max;
+    delay_length = (int16_t)product;
+  }
+
+
   AM_FQ = 20*(((float)(4096-analogRead(AM_FQ_PIN)))/4096);
   AM_wave.setFrequency(AM_FQ);
   FM_FQ = 20*(((float)(4096-analogRead(FM_FQ_PIN)))/4096);
@@ -140,11 +161,13 @@ void loop() {
         CAR_wave.setFrequency(CAR_FQ);
        //int16_t sample =  (1-(AM_AMT*AM_wave.readSample2()/ 32767.0)) * CAR_wave.readSample2();
        //int16_t sample =   (int)((1-(AM_AMT*AM_instant/ 32767.0)) * (float)CAR_wave.readSample2());
-       int16_t sample =   (int16_t)(AM_float * (float)CAR_wave.readSample2());
+       int16_t sample =   (int16_t)(CAR_VOL*AM_float * (float)CAR_wave.readSample2());
        if (fireState==HIGH)
        {sample=0;}
-       int16_t delay_sample = *del_ptr_read++;
-       delay_sample = *del_ptr_read++;
+       //int16_t delay_sample = *del_ptr_read++;
+       //delay_sample = *del_ptr_read++;
+       int16_t delay_sample = *del_ptr_read;
+       delay_sample = *del_ptr_read;
        int16_t mix = (sample/2) + (delay_sample/2);
        //int16_t mix = sample;
       
@@ -154,13 +177,25 @@ void loop() {
       *del_ptr_write++ = (sample/2) + (delay_sample/2);
 
       //result+=4;
-      if (del_ptr_read>=del_ptr_end){
-        del_ptr_read=del_ptr_start; // del_ptr_read overflow
-        }
+
       
-        if (del_ptr_write>=del_ptr_end){
-          del_ptr_write=del_ptr_start;
-        }
+      if (del_ptr_write>=del_ptr_end){
+        del_ptr_write=del_ptr_start;
+      }
+
+      if ((del_ptr_write-delay_length)<del_ptr_start)
+      {
+        del_ptr_read=del_ptr_end-(delay_length-(del_ptr_write-del_ptr_start));
+      }
+      else{
+        del_ptr_read=del_ptr_write-delay_length;
+      }
+
+
+
+      //  if (del_ptr_read>=del_ptr_end){
+      //   del_ptr_read=del_ptr_start; // del_ptr_read overflow
+      //   }
 
       
 
@@ -179,13 +214,15 @@ void loop() {
   // Serial.print((int)CAR_FQ);
   //     Serial.print("\nFM_FQ\n");
    //Serial.print(FM_FQ);
-         Serial.print("\nAM_float\n");
-   Serial.print(AM_float);
+    //     Serial.print("\nAM_float\n");
+  // Serial.print(AM_float);
   //         Serial.print("\nFM_instant\n");
   // Serial.print(FM_instant);
-  //       Serial.print("\nAM_FQ\n");
-  // Serial.print(AM_FQ);
-  //           Serial.print("\nAM_instant\n");
+      Serial.print("DEL_RT\n");
+  Serial.print(DEL_RT);
+        Serial.print("delay_length\n");
+  Serial.print(delay_length);
+  //       Serial.print("\nAM_instant\n");
   // Serial.print(AM_instant);
 
     // fire button is  pressed, sound on
